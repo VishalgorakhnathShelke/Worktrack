@@ -22,11 +22,11 @@ This repository implements the ten-week UNSW project as a scalable monorepo:
 
 ## Current Milestone
 
-Milestone 5 adds the browser recorder engine. An explicitly started tab now
-captures privacy-filtered workflow events in ten-second batches and low-FPS
-screenshots, while one serialized coordinator assigns monotonic chunk indexes
-and preserves progress across failed uploads. See
-[`docs/commits/005-browser-recorder-engine.md`](docs/commits/005-browser-recorder-engine.md).
+Milestone 6 delivers an operable Chrome recorder. Its popup collects explicit
+capture consent, starts the selected tab, controls pause/resume/stop, displays
+evidence counts and processing state, and optionally records microphone
+narration through an offscreen ten-second WebM/Opus pipeline. See
+[`docs/commits/006-operable-chrome-recorder.md`](docs/commits/006-operable-chrome-recorder.md).
 
 ## API Quick Start
 
@@ -44,13 +44,13 @@ is checked in at [`apps/api/openapi.json`](apps/api/openapi.json).
 
 ```powershell
 cd apps/extension
-node --test tests/uploader.test.mjs
+node --test tests/*.test.mjs
 node scripts/build.mjs
 ```
 
-Load `apps/extension/dist` as an unpacked Chrome extension. The recorder engine
-is now present; popup controls and microphone recording land in the next
-milestone.
+Load `apps/extension/dist` as an unpacked Chrome extension, open a normal web
+page, click the WorkTrace toolbar action, enter a workflow name, review consent,
+and start recording.
 
 ## Development Workflow
 

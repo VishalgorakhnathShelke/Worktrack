@@ -86,3 +86,33 @@ test("reports quota thresholds", async () => {
     pauseScreenshots: true,
   });
 });
+
+test("completion immediately retries chunks still under backoff", async () => {
+  const store = new MemoryChunkStore();
+  let uploads = 0;
+  const client = new RecordingUploader({
+    apiUrl: "https://api.test",
+    tenantId: "tenant",
+    token: "token",
+    store,
+    fetchImpl: async (url) => {
+      if (url.endsWith("/complete")) return response({ status: "validating" });
+      uploads += 1;
+      return response({ duplicate: false });
+    },
+  });
+  const chunk = await createChunk({
+    recordingId: "recording",
+    index: 0,
+    contentType: "events",
+    timestampStartMs: 0,
+    timestampEndMs: 1,
+    payload: "{}",
+  });
+  await store.put({ ...chunk, nextAttemptAt: Date.now() + 60_000 });
+
+  const result = await client.complete("recording", 1);
+
+  assert.equal(uploads, 1);
+  assert.equal(result.status, "validating");
+});

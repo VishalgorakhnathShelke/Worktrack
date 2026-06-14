@@ -3,8 +3,9 @@ import test from "node:test";
 
 import { MemoryStateStore, RecordingController } from "../src/core/recorder.mjs";
 
-function fixture({ persistFails = false, queueFails = false } = {}) {
+function fixture({ completeFails = false, persistFails = false, queueFails = false } = {}) {
   const chunks = [];
+  let completionAttempts = 0;
   const uploader = {
     createRecording: async () => ({ id: "recording-1" }),
     persist: async (chunk) => {
@@ -14,7 +15,11 @@ function fixture({ persistFails = false, queueFails = false } = {}) {
     upload: async () => {
       if (queueFails) throw new Error("offline");
     },
-    complete: async (_recordingId, count) => ({ status: `validating-${count}` }),
+    complete: async (_recordingId, count) => {
+      completionAttempts += 1;
+      if (completeFails && completionAttempts === 1) throw new Error("chunks pending");
+      return { status: `validating-${count}` };
+    },
   };
   let now = 1_000;
   const controller = new RecordingController({
@@ -87,4 +92,54 @@ test("creates a boundary event when stopped without captured activity", async ()
   assert.equal(chunks.length, 1);
   assert.equal(chunks[0].contentType, "events");
   assert.equal(stopped.remoteStatus, "validating-1");
+});
+
+test("retries completion without creating duplicate chunks", async () => {
+  const { controller, chunks } = fixture({ completeFails: true });
+  await controller.start({ workflowName: "Approve invoice", tabId: 7 });
+  await assert.rejects(controller.stop(), /chunks pending/);
+  assert.equal((await controller.current()).phase, "uploading");
+
+  const retried = await controller.retryCompletion();
+
+  assert.equal(chunks.length, 1);
+  assert.equal(retried.phase, "processing");
+  assert.equal(retried.error, null);
+});
+
+test("records audio chunks in the shared sequence", async () => {
+  const { controller, chunks } = fixture();
+  await controller.start({ workflowName: "Approve invoice", tabId: 7, hasAudio: true });
+
+  const state = await controller.recordAudio(
+    new Blob(["audio"], { type: "audio/webm;codecs=opus" }),
+    0,
+    10_000,
+  );
+
+  assert.equal(chunks[0].contentType, "audio");
+  assert.equal(state.audioCount, 1);
+  assert.equal(state.nextChunkIndex, 1);
+});
+
+test("accepts the final audio chunk while paused", async () => {
+  const { controller, chunks } = fixture();
+  await controller.start({ workflowName: "Approve invoice", tabId: 7, hasAudio: true });
+  await controller.pause();
+
+  const state = await controller.recordAudio(new Blob(["final"]), 0, 2_000);
+
+  assert.equal(chunks[0].contentType, "audio");
+  assert.equal(state.phase, "paused");
+});
+
+test("records microphone failure without ending browser capture", async () => {
+  const { controller } = fixture();
+  await controller.start({ workflowName: "Approve invoice", tabId: 7, hasAudio: true });
+
+  const state = await controller.markAudioUnavailable("Microphone permission denied");
+
+  assert.equal(state.phase, "recording");
+  assert.equal(state.audioEnabled, false);
+  assert.match(state.audioError, /permission denied/);
 });

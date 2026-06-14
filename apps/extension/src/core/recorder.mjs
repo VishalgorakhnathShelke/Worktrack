@@ -16,7 +16,7 @@ export class RecordingController {
   start({ workflowName, tabId, hasAudio = false }) {
     return this.run(async () => {
       const existing = await this.current();
-      if (existing?.phase === "recording" || existing?.phase === "paused") {
+      if (["recording", "paused", "uploading"].includes(existing?.phase)) {
         throw new Error("A recording is already active");
       }
       const remote = await this.uploader.createRecording(workflowName, hasAudio);
@@ -25,6 +25,8 @@ export class RecordingController {
         workflowName,
         tabId,
         hasAudio,
+        audioEnabled: hasAudio,
+        audioError: null,
         phase: "recording",
         startedAt: this.clock(),
         pausedAt: null,
@@ -71,10 +73,23 @@ export class RecordingController {
   }
 
   recordAudio(blob, timestampStartMs, timestampEndMs) {
-    return this.append("audio", blob, blob.type || "audio/webm", {
-      audioCount: 1,
-      timestampStartMs,
-      timestampEndMs,
+    return this.run(async () => {
+      const state = await this.requireActive();
+      if (!["recording", "paused"].includes(state.phase)) {
+        throw new Error("Recording no longer accepts audio");
+      }
+      return this.appendNow(state, "audio", blob, blob.type || "audio/webm", {
+        audioCount: 1,
+        timestampStartMs,
+        timestampEndMs,
+      });
+    });
+  }
+
+  markAudioUnavailable(error) {
+    return this.run(async () => {
+      const state = await this.requireActive();
+      return this.save({ ...state, audioEnabled: false, audioError: error });
     });
   }
 
@@ -100,6 +115,20 @@ export class RecordingController {
         return this.save({ ...state, phase: "processing", remoteStatus: remote.status });
       } catch (error) {
         await this.save({ ...state, phase: "uploading", error: error.message });
+        throw error;
+      }
+    });
+  }
+
+  retryCompletion() {
+    return this.run(async () => {
+      const state = await this.requireActive();
+      if (state.phase !== "uploading") throw new Error("Recording is not awaiting upload");
+      try {
+        const remote = await this.uploader.complete(state.recordingId, state.nextChunkIndex);
+        return this.save({ ...state, phase: "processing", remoteStatus: remote.status, error: null });
+      } catch (error) {
+        await this.save({ ...state, error: error.message });
         throw error;
       }
     });

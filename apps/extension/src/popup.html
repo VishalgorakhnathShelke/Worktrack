@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WorkTrace Recorder</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="brand-mark">W</div>
+        <div>
+          <p class="eyebrow">WorkTrace AI</p>
+          <h1>Workflow recorder</h1>
+        </div>
+        <span id="phase-pill" class="pill idle">Idle</span>
+      </header>
+
+      <section id="setup-panel">
+        <label>
+          Workflow name
+          <input id="workflow-name" maxlength="200" placeholder="e.g. Approve an invoice">
+        </label>
+
+        <label class="toggle-row">
+          <input id="include-audio" type="checkbox">
+          <span>
+            <strong>Include microphone narration</strong>
+            <small>Audio is buffered and uploaded in durable ten-second chunks.</small>
+          </span>
+        </label>
+
+        <label class="consent">
+          <input id="capture-consent" type="checkbox">
+          <span>
+            I consent to capture this tab's visible screenshots and workflow actions.
+            Structured events exclude typed values and sensitive input changes;
+            screenshots may include any visible on-screen information.
+          </span>
+        </label>
+
+        <button id="start-button" class="primary">Start recording this tab</button>
+      </section>
+
+      <section id="active-panel" hidden>
+        <div class="recording-card">
+          <span class="pulse"></span>
+          <div>
+            <strong id="active-workflow"></strong>
+            <small id="elapsed">00:00</small>
+          </div>
+        </div>
+        <div class="metrics">
+          <div><strong id="event-count">0</strong><span>Events</span></div>
+          <div><strong id="screenshot-count">0</strong><span>Screenshots</span></div>
+          <div><strong id="audio-count">0</strong><span>Audio chunks</span></div>
+        </div>
+        <div class="controls">
+          <button id="pause-button" class="secondary">Pause</button>
+          <button id="stop-button" class="danger">Stop & process</button>
+        </div>
+      </section>
+
+      <section id="processing-panel" hidden>
+        <p class="eyebrow">Processing pipeline</p>
+        <h2 id="processing-stage">Uploading recording</h2>
+        <div class="progress"><span id="progress-bar"></span></div>
+        <p id="processing-message" class="muted">WorkTrace is preparing your evidence.</p>
+        <button id="retry-button" class="secondary" hidden>Retry pending uploads</button>
+      </section>
+
+      <details>
+        <summary>Connection settings</summary>
+        <label>API URL<input id="api-url" value="http://localhost:8000"></label>
+        <label>Tenant ID<input id="tenant-id" value="00000000-0000-0000-0000-000000000001"></label>
+        <label>API token<input id="api-token" type="password" value="development-only-token"></label>
+      </details>
+
+      <p id="error-message" class="error" role="alert"></p>
+    </main>
+    <script type="module" src="popup.mjs"></script>
+  </body>
+</html>

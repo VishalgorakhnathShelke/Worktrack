@@ -8,6 +8,7 @@ let events = [];
 let eventTimer = null;
 let screenshotTimer = null;
 let screenshotPending = false;
+let indicator = null;
 
 void refreshState();
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -78,9 +79,12 @@ async function flushEvents() {
 async function requestScreenshot() {
   if (!isRecording() || screenshotPending || isSensitive(document.activeElement)) return;
   screenshotPending = true;
+  if (indicator) indicator.style.visibility = "hidden";
   try {
+    await new Promise((resolve) => requestAnimationFrame(() => resolve()));
     await send({ type: "capture-screenshot", recordingId: state.recordingId });
   } finally {
+    if (indicator) indicator.style.visibility = "visible";
     screenshotPending = false;
   }
 }
@@ -90,9 +94,29 @@ function configureTimers() {
   clearInterval(screenshotTimer);
   eventTimer = null;
   screenshotTimer = null;
+  updateIndicator();
   if (!isRecording()) return;
   eventTimer = setInterval(() => void flushEvents(), EVENT_FLUSH_MS);
   screenshotTimer = setInterval(() => void requestScreenshot(), SCREENSHOT_INTERVAL_MS);
+}
+
+function updateIndicator() {
+  if (!state || !["recording", "paused"].includes(state.phase)) {
+    indicator?.remove();
+    indicator = null;
+    return;
+  }
+  indicator ??= document.createElement("div");
+  indicator.id = "worktrace-recording-indicator";
+  indicator.textContent = state.phase === "paused" ? "WorkTrace paused" : "WorkTrace recording";
+  indicator.style.cssText = [
+    "position:fixed", "z-index:2147483647", "top:14px", "right:14px",
+    "padding:9px 12px", "border-radius:999px", "color:#fff",
+    `background:${state.phase === "paused" ? "#9a6700" : "#c92a3d"}`,
+    "box-shadow:0 8px 24px #0003", "font:700 12px/1.2 system-ui,sans-serif",
+    "pointer-events:none",
+  ].join(";");
+  if (!indicator.isConnected) (document.body || document.documentElement).append(indicator);
 }
 
 function isRecording() {

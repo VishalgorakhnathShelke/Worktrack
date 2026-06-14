@@ -57,11 +57,11 @@ export class RecordingUploader {
     }
   }
 
-  async flush(recordingId) {
+  async flush(recordingId, { force = false } = {}) {
     const pending = await this.store.list(recordingId);
     const results = [];
     for (const chunk of pending) {
-      if (chunk.nextAttemptAt > Date.now()) continue;
+      if (!force && chunk.nextAttemptAt > Date.now()) continue;
       try {
         results.push(await this.upload(chunk));
       } catch {
@@ -72,7 +72,7 @@ export class RecordingUploader {
   }
 
   async complete(recordingId, expectedChunkCount) {
-    await this.flush(recordingId);
+    await this.flush(recordingId, { force: true });
     const pending = await this.store.list(recordingId);
     if (pending.length) throw new Error(`${pending.length} chunks remain unacknowledged`);
     const response = await this.fetch(`${this.apiUrl}/recordings/${recordingId}/complete`, {
