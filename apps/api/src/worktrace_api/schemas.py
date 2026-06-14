@@ -159,3 +159,59 @@ class ExportBundle(StrictModel):
     session: WorkflowSession
     sops: list[SOP]
     feedback: list[Feedback]
+
+
+class RecordingStatus(StrEnum):
+    RECORDING = "recording"
+    UPLOADING = "uploading"
+    VALIDATING = "validating"
+    TRANSCRIBING_AUDIO = "transcribing_audio"
+    PROCESSING_SCREENSHOTS = "processing_screenshots"
+    ALIGNING_EVIDENCE = "aligning_evidence"
+    GENERATING_SOP = "generating_sop"
+    READY_FOR_REVIEW = "ready_for_review"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class ChunkContentType(StrEnum):
+    AUDIO = "audio"
+    EVENTS = "events"
+    SCREENSHOTS = "screenshots"
+
+
+class RecordingCreate(StrictModel):
+    workflow_name: str = Field(min_length=1, max_length=200)
+    has_audio: bool = False
+
+
+class Recording(StrictModel):
+    schema_version: Literal["1.0"] = SCHEMA_VERSION
+    tenant_id: UUID
+    id: UUID
+    workflow_name: str
+    status: RecordingStatus
+    expected_chunk_count: int | None = Field(default=None, ge=0)
+    uploaded_chunk_count: int = Field(ge=0)
+    uploaded_bytes: int = Field(ge=0)
+    has_audio: bool
+    error_message: str | None = None
+    created_at: datetime
+    completed_at: datetime | None = None
+
+
+class ChunkReceipt(StrictModel):
+    recording_id: UUID
+    chunk_index: int = Field(ge=0)
+    checksum_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    payload_size: int = Field(gt=0)
+    duplicate: bool = False
+
+
+class RecordingComplete(StrictModel):
+    expected_chunk_count: int = Field(ge=1)
+
+
+class RecordingStatusResponse(StrictModel):
+    recording: Recording
+    stages: list[RecordingStatus]

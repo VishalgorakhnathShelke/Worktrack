@@ -4,21 +4,41 @@ from datetime import UTC, datetime
 from hmac import compare_digest
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, Response, status
+from fastapi import (
+    Depends,
+    FastAPI,
+    File,
+    Form,
+    Header,
+    HTTPException,
+    Path,
+    Query,
+    Response,
+    UploadFile,
+    status,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from worktrace_api.database import create_tables
 from worktrace_api.privacy import sanitize_session
+from worktrace_api.recordings import ChunkStorage
 from worktrace_api.repository import Repository, get_db
 from worktrace_api.schemas import (
     SOP,
     AnalyticsSummary,
+    ChunkContentType,
+    ChunkReceipt,
     ExportBundle,
     ExternalAIApprovalRequest,
     ExternalAIPayloadPreview,
     Feedback,
     FeedbackCreate,
+    Recording,
+    RecordingComplete,
+    RecordingCreate,
+    RecordingStatus,
+    RecordingStatusResponse,
     SOPApproval,
     SOPStatus,
     WorkflowSession,
@@ -51,6 +71,7 @@ app = FastAPI(
     openapi_tags=[
         {"name": "system", "description": "Runtime health."},
         {"name": "sessions", "description": "Workflow ingestion and privacy controls."},
+        {"name": "recordings", "description": "Resumable raw recording ingestion."},
         {"name": "sops", "description": "SOP generation, review, and approval."},
         {"name": "walkthroughs", "description": "Approved onboarding walkthroughs."},
         {"name": "feedback", "description": "Employee feedback capture and classification."},
@@ -65,6 +86,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["Authorization", "Content-Type", "X-Tenant-ID"],
 )
+chunk_storage = ChunkStorage(settings.recording_storage_path, settings.max_chunk_bytes)
+processing_stages = [
+    RecordingStatus.RECORDING,
+    RecordingStatus.UPLOADING,
+    RecordingStatus.VALIDATING,
+    RecordingStatus.TRANSCRIBING_AUDIO,
+    RecordingStatus.PROCESSING_SCREENSHOTS,
+    RecordingStatus.ALIGNING_EVIDENCE,
+    RecordingStatus.GENERATING_SOP,
+    RecordingStatus.READY_FOR_REVIEW,
+    RecordingStatus.COMPLETED,
+]
 
 
 def authenticated_tenant(
@@ -95,6 +128,126 @@ def require_session(repo: Repository, session_id: UUID) -> WorkflowSession:
 @app.get("/health", tags=["system"])
 def health() -> dict[str, str]:
     return {"status": "ok", "environment": settings.env}
+
+
+@app.post(
+    "/recordings",
+    response_model=Recording,
+    status_code=status.HTTP_201_CREATED,
+    tags=["recordings"],
+)
+def create_recording(payload: RecordingCreate, repo: Repository = Depends(repository)) -> Recording:
+    return repo.create_recording(payload.workflow_name, payload.has_audio)
+
+
+@app.put(
+    "/recordings/{recording_id}/chunks/{chunk_index}",
+    response_model=ChunkReceipt,
+    tags=["recordings"],
+)
+async def upload_recording_chunk(
+    recording_id: UUID,
+    chunk_index: int = Path(ge=0),
+    content_type: ChunkContentType = Form(),
+    timestamp_start_ms: int = Form(ge=0),
+    timestamp_end_ms: int = Form(ge=0),
+    checksum_sha256: str = Form(pattern=r"^[a-f0-9]{64}$"),
+    idempotency_key: str = Form(min_length=1, max_length=200),
+    payload_size: int = Form(gt=0),
+    file: UploadFile = File(),
+    repo: Repository = Depends(repository),
+) -> ChunkReceipt:
+    recording = repo.get_recording(recording_id)
+    if not recording:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recording not found")
+    if timestamp_end_ms < timestamp_start_ms:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Chunk end timestamp precedes start timestamp",
+        )
+    payload = await file.read(settings.max_chunk_bytes + 1)
+    try:
+        actual_payload_size = chunk_storage.validate(payload, checksum_sha256)
+        if actual_payload_size != payload_size:
+            raise ValueError("Declared payload size does not match payload")
+        existing = repo.get_matching_chunk_receipt(
+            recording_id,
+            chunk_index,
+            content_type,
+            timestamp_start_ms,
+            timestamp_end_ms,
+            checksum_sha256,
+            idempotency_key,
+        )
+        if existing:
+            return existing
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    if recording.status not in {RecordingStatus.RECORDING, RecordingStatus.UPLOADING}:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Recording no longer accepts chunks",
+        )
+    try:
+        storage_key, payload_size = chunk_storage.write(
+            repo.tenant_id,
+            recording_id,
+            chunk_index,
+            content_type,
+            payload,
+            checksum_sha256,
+        )
+        return repo.save_chunk(
+            recording_id=recording_id,
+            chunk_index=chunk_index,
+            content_type=content_type,
+            media_type=file.content_type or "application/octet-stream",
+            timestamp_start_ms=timestamp_start_ms,
+            timestamp_end_ms=timestamp_end_ms,
+            checksum_sha256=checksum_sha256,
+            idempotency_key=idempotency_key,
+            payload_size=payload_size,
+            storage_key=storage_key,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+
+
+@app.post(
+    "/recordings/{recording_id}/complete",
+    response_model=Recording,
+    tags=["recordings"],
+)
+def complete_recording(
+    recording_id: UUID,
+    payload: RecordingComplete,
+    repo: Repository = Depends(repository),
+) -> Recording:
+    try:
+        return repo.complete_recording(recording_id, payload.expected_chunk_count)
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+
+
+@app.get(
+    "/recordings/{recording_id}/status",
+    response_model=RecordingStatusResponse,
+    tags=["recordings"],
+)
+def recording_status(
+    recording_id: UUID, repo: Repository = Depends(repository)
+) -> RecordingStatusResponse:
+    recording = repo.get_recording(recording_id)
+    if not recording:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recording not found")
+    stages = [
+        stage
+        for stage in processing_stages
+        if recording.has_audio or stage != RecordingStatus.TRANSCRIBING_AUDIO
+    ]
+    return RecordingStatusResponse(recording=recording, stages=stages)
 
 
 @app.post(

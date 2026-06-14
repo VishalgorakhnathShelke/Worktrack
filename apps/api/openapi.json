@@ -31,6 +31,284 @@
         }
       }
     },
+    "/recordings": {
+      "post": {
+        "tags": [
+          "recordings"
+        ],
+        "summary": "Create Recording",
+        "operationId": "create_recording_recordings_post",
+        "parameters": [
+          {
+            "name": "X-Tenant-ID",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "X-Tenant-Id"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordingCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recording"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recordings/{recording_id}/chunks/{chunk_index}": {
+      "put": {
+        "tags": [
+          "recordings"
+        ],
+        "summary": "Upload Recording Chunk",
+        "operationId": "upload_recording_chunk_recordings__recording_id__chunks__chunk_index__put",
+        "parameters": [
+          {
+            "name": "recording_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Recording Id"
+            }
+          },
+          {
+            "name": "chunk_index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "title": "Chunk Index"
+            }
+          },
+          {
+            "name": "X-Tenant-ID",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "X-Tenant-Id"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_recording_chunk_recordings__recording_id__chunks__chunk_index__put"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChunkReceipt"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recordings/{recording_id}/complete": {
+      "post": {
+        "tags": [
+          "recordings"
+        ],
+        "summary": "Complete Recording",
+        "operationId": "complete_recording_recordings__recording_id__complete_post",
+        "parameters": [
+          {
+            "name": "recording_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Recording Id"
+            }
+          },
+          {
+            "name": "X-Tenant-ID",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "X-Tenant-Id"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordingComplete"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recording"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recordings/{recording_id}/status": {
+      "get": {
+        "tags": [
+          "recordings"
+        ],
+        "summary": "Recording Status",
+        "operationId": "recording_status_recordings__recording_id__status_get",
+        "parameters": [
+          {
+            "name": "recording_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Recording Id"
+            }
+          },
+          {
+            "name": "X-Tenant-ID",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "X-Tenant-Id"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordingStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/sessions": {
       "post": {
         "tags": [
@@ -974,6 +1252,102 @@
         ],
         "title": "AnalyticsSummary"
       },
+      "Body_upload_recording_chunk_recordings__recording_id__chunks__chunk_index__put": {
+        "properties": {
+          "content_type": {
+            "$ref": "#/components/schemas/ChunkContentType"
+          },
+          "timestamp_start_ms": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Timestamp Start Ms"
+          },
+          "timestamp_end_ms": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Timestamp End Ms"
+          },
+          "checksum_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Checksum Sha256"
+          },
+          "idempotency_key": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Idempotency Key"
+          },
+          "payload_size": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Payload Size"
+          },
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content_type",
+          "timestamp_start_ms",
+          "timestamp_end_ms",
+          "checksum_sha256",
+          "idempotency_key",
+          "payload_size",
+          "file"
+        ],
+        "title": "Body_upload_recording_chunk_recordings__recording_id__chunks__chunk_index__put"
+      },
+      "ChunkContentType": {
+        "type": "string",
+        "enum": [
+          "audio",
+          "events",
+          "screenshots"
+        ],
+        "title": "ChunkContentType"
+      },
+      "ChunkReceipt": {
+        "properties": {
+          "recording_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Recording Id"
+          },
+          "chunk_index": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Chunk Index"
+          },
+          "checksum_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Checksum Sha256"
+          },
+          "payload_size": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Payload Size"
+          },
+          "duplicate": {
+            "type": "boolean",
+            "title": "Duplicate",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "recording_id",
+          "chunk_index",
+          "checksum_sha256",
+          "payload_size"
+        ],
+        "title": "ChunkReceipt"
+      },
       "EventType": {
         "type": "string",
         "enum": [
@@ -1231,6 +1605,173 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "Recording": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Tenant Id"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "workflow_name": {
+            "type": "string",
+            "title": "Workflow Name"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RecordingStatus"
+          },
+          "expected_chunk_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Chunk Count"
+          },
+          "uploaded_chunk_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Uploaded Chunk Count"
+          },
+          "uploaded_bytes": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Uploaded Bytes"
+          },
+          "has_audio": {
+            "type": "boolean",
+            "title": "Has Audio"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tenant_id",
+          "id",
+          "workflow_name",
+          "status",
+          "uploaded_chunk_count",
+          "uploaded_bytes",
+          "has_audio",
+          "created_at"
+        ],
+        "title": "Recording"
+      },
+      "RecordingComplete": {
+        "properties": {
+          "expected_chunk_count": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Chunk Count"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_chunk_count"
+        ],
+        "title": "RecordingComplete"
+      },
+      "RecordingCreate": {
+        "properties": {
+          "workflow_name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Workflow Name"
+          },
+          "has_audio": {
+            "type": "boolean",
+            "title": "Has Audio",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "workflow_name"
+        ],
+        "title": "RecordingCreate"
+      },
+      "RecordingStatus": {
+        "type": "string",
+        "enum": [
+          "recording",
+          "uploading",
+          "validating",
+          "transcribing_audio",
+          "processing_screenshots",
+          "aligning_evidence",
+          "generating_sop",
+          "ready_for_review",
+          "completed",
+          "failed"
+        ],
+        "title": "RecordingStatus"
+      },
+      "RecordingStatusResponse": {
+        "properties": {
+          "recording": {
+            "$ref": "#/components/schemas/Recording"
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/RecordingStatus"
+            },
+            "type": "array",
+            "title": "Stages"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "recording",
+          "stages"
+        ],
+        "title": "RecordingStatusResponse"
       },
       "SOP": {
         "properties": {
@@ -1768,6 +2309,10 @@
     {
       "name": "sessions",
       "description": "Workflow ingestion and privacy controls."
+    },
+    {
+      "name": "recordings",
+      "description": "Resumable raw recording ingestion."
     },
     {
       "name": "sops",

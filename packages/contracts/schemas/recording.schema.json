@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://worktrace.local/contracts/recording.schema.json",
+  "title": "Recording",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tenant_id",
+    "id",
+    "workflow_name",
+    "status",
+    "uploaded_chunk_count",
+    "uploaded_bytes",
+    "has_audio",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "id": { "type": "string", "format": "uuid" },
+    "workflow_name": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "status": {
+      "enum": [
+        "recording",
+        "uploading",
+        "validating",
+        "transcribing_audio",
+        "processing_screenshots",
+        "aligning_evidence",
+        "generating_sop",
+        "ready_for_review",
+        "completed",
+        "failed"
+      ]
+    },
+    "expected_chunk_count": { "type": ["integer", "null"], "minimum": 0 },
+    "uploaded_chunk_count": { "type": "integer", "minimum": 0 },
+    "uploaded_bytes": { "type": "integer", "minimum": 0 },
+    "has_audio": { "type": "boolean" },
+    "error_message": { "type": ["string", "null"], "maxLength": 1000 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": ["string", "null"], "format": "date-time" }
+  }
+}

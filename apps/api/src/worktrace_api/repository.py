@@ -8,11 +8,21 @@ from sqlalchemy.orm import Session
 from worktrace_api.database import (
     AIApprovalRecord,
     FeedbackRecord,
+    RecordingChunkRecord,
+    RecordingRecord,
     SessionLocal,
     SOPRecord,
     WorkflowSessionRecord,
 )
-from worktrace_api.schemas import SOP, Feedback, WorkflowSession
+from worktrace_api.schemas import (
+    SOP,
+    ChunkContentType,
+    ChunkReceipt,
+    Feedback,
+    Recording,
+    RecordingStatus,
+    WorkflowSession,
+)
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -53,6 +63,184 @@ class Repository:
         self.db.add(record)
         self.db.commit()
         return session
+
+    def create_recording(self, workflow_name: str, has_audio: bool) -> Recording:
+        recording = Recording(
+            tenant_id=self.tenant_id,
+            id=uuid4(),
+            workflow_name=workflow_name,
+            status=RecordingStatus.RECORDING,
+            uploaded_chunk_count=0,
+            uploaded_bytes=0,
+            has_audio=has_audio,
+            created_at=datetime.now(UTC),
+        )
+        self.db.add(
+            RecordingRecord(
+                id=str(recording.id),
+                tenant_id=str(self.tenant_id),
+                workflow_name=workflow_name,
+                status=recording.status,
+                uploaded_chunk_count=0,
+                uploaded_bytes=0,
+                has_audio=has_audio,
+                created_at=recording.created_at,
+            )
+        )
+        self.db.commit()
+        return recording
+
+    def get_recording(self, recording_id: UUID) -> Recording | None:
+        record = self.db.scalar(
+            tenant_query(RecordingRecord, self.tenant_id).where(
+                RecordingRecord.id == str(recording_id)
+            )
+        )
+        return self._recording_from_record(record) if record else None
+
+    def save_chunk(
+        self,
+        recording_id: UUID,
+        chunk_index: int,
+        content_type: ChunkContentType,
+        media_type: str,
+        timestamp_start_ms: int,
+        timestamp_end_ms: int,
+        checksum_sha256: str,
+        idempotency_key: str,
+        payload_size: int,
+        storage_key: str,
+    ) -> ChunkReceipt:
+        existing = self.db.scalar(
+            tenant_query(RecordingChunkRecord, self.tenant_id).where(
+                RecordingChunkRecord.recording_id == str(recording_id),
+                RecordingChunkRecord.chunk_index == chunk_index,
+            )
+        )
+        if existing:
+            if (
+                existing.checksum_sha256 != checksum_sha256
+                or existing.idempotency_key != idempotency_key
+            ):
+                raise ValueError("Chunk index already exists with different content")
+            return ChunkReceipt(
+                recording_id=recording_id,
+                chunk_index=chunk_index,
+                checksum_sha256=checksum_sha256,
+                payload_size=existing.payload_size,
+                duplicate=True,
+            )
+
+        recording = self.db.scalar(
+            tenant_query(RecordingRecord, self.tenant_id).where(
+                RecordingRecord.id == str(recording_id)
+            )
+        )
+        if not recording:
+            raise LookupError("Recording not found")
+        if recording.status not in {RecordingStatus.RECORDING, RecordingStatus.UPLOADING}:
+            raise ValueError("Recording no longer accepts chunks")
+
+        self.db.add(
+            RecordingChunkRecord(
+                recording_id=str(recording_id),
+                chunk_index=chunk_index,
+                tenant_id=str(self.tenant_id),
+                content_type=content_type,
+                media_type=media_type,
+                timestamp_start_ms=timestamp_start_ms,
+                timestamp_end_ms=timestamp_end_ms,
+                checksum_sha256=checksum_sha256,
+                idempotency_key=idempotency_key,
+                payload_size=payload_size,
+                storage_key=storage_key,
+            )
+        )
+        recording.status = RecordingStatus.UPLOADING
+        recording.uploaded_chunk_count = RecordingRecord.uploaded_chunk_count + 1
+        recording.uploaded_bytes = RecordingRecord.uploaded_bytes + payload_size
+        self.db.commit()
+        return ChunkReceipt(
+            recording_id=recording_id,
+            chunk_index=chunk_index,
+            checksum_sha256=checksum_sha256,
+            payload_size=payload_size,
+        )
+
+    def get_matching_chunk_receipt(
+        self,
+        recording_id: UUID,
+        chunk_index: int,
+        content_type: ChunkContentType,
+        timestamp_start_ms: int,
+        timestamp_end_ms: int,
+        checksum_sha256: str,
+        idempotency_key: str,
+    ) -> ChunkReceipt | None:
+        record = self.db.scalar(
+            tenant_query(RecordingChunkRecord, self.tenant_id).where(
+                RecordingChunkRecord.recording_id == str(recording_id),
+                RecordingChunkRecord.chunk_index == chunk_index,
+            )
+        )
+        if not record:
+            return None
+        if (
+            record.content_type != content_type
+            or record.timestamp_start_ms != timestamp_start_ms
+            or record.timestamp_end_ms != timestamp_end_ms
+            or record.checksum_sha256 != checksum_sha256
+            or record.idempotency_key != idempotency_key
+        ):
+            raise ValueError("Chunk index already exists with different content or metadata")
+        return ChunkReceipt(
+            recording_id=recording_id,
+            chunk_index=chunk_index,
+            checksum_sha256=record.checksum_sha256,
+            payload_size=record.payload_size,
+            duplicate=True,
+        )
+
+    def complete_recording(self, recording_id: UUID, expected_chunk_count: int) -> Recording:
+        record = self.db.scalar(
+            tenant_query(RecordingRecord, self.tenant_id).where(
+                RecordingRecord.id == str(recording_id)
+            )
+        )
+        if not record:
+            raise LookupError("Recording not found")
+        indexes = self.db.scalars(
+            select(RecordingChunkRecord.chunk_index)
+            .where(
+                RecordingChunkRecord.tenant_id == str(self.tenant_id),
+                RecordingChunkRecord.recording_id == str(recording_id),
+            )
+            .order_by(RecordingChunkRecord.chunk_index)
+        ).all()
+        expected_indexes = list(range(expected_chunk_count))
+        if list(indexes) != expected_indexes:
+            missing = sorted(set(expected_indexes) - set(indexes))
+            raise ValueError(f"Recording has missing chunks: {missing}")
+        record.expected_chunk_count = expected_chunk_count
+        record.status = RecordingStatus.VALIDATING
+        record.completed_at = datetime.now(UTC)
+        self.db.commit()
+        return self._recording_from_record(record)
+
+    def set_recording_status(
+        self, recording_id: UUID, status: RecordingStatus, error_message: str | None = None
+    ) -> Recording | None:
+        record = self.db.scalar(
+            tenant_query(RecordingRecord, self.tenant_id).where(
+                RecordingRecord.id == str(recording_id)
+            )
+        )
+        if not record:
+            return None
+        record.status = status
+        record.error_message = error_message
+        self.db.commit()
+        return self._recording_from_record(record)
 
     def get_session(self, session_id: UUID) -> WorkflowSession | None:
         record = self.db.scalar(
@@ -263,5 +451,24 @@ class Repository:
                 "classification": record.classification,
                 "audio_reference": record.audio_reference,
                 "created_at": record.created_at,
+            }
+        )
+
+    @staticmethod
+    def _recording_from_record(record: RecordingRecord) -> Recording:
+        return Recording.model_validate(
+            {
+                "schema_version": "1.0",
+                "tenant_id": record.tenant_id,
+                "id": record.id,
+                "workflow_name": record.workflow_name,
+                "status": record.status,
+                "expected_chunk_count": record.expected_chunk_count,
+                "uploaded_chunk_count": record.uploaded_chunk_count,
+                "uploaded_bytes": record.uploaded_bytes,
+                "has_audio": record.has_audio,
+                "error_message": record.error_message,
+                "created_at": record.created_at,
+                "completed_at": record.completed_at,
             }
         )

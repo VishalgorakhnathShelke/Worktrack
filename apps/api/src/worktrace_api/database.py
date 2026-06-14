@@ -78,6 +78,41 @@ class AIApprovalRecord(TenantRecord, Base):
     )
 
 
+class RecordingRecord(TenantRecord, Base):
+    __tablename__ = "recordings"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    workflow_name: Mapped[str] = mapped_column(String(200), index=True)
+    status: Mapped[str] = mapped_column(String(50), index=True)
+    expected_chunk_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    uploaded_chunk_count: Mapped[int] = mapped_column(Integer, default=0)
+    uploaded_bytes: Mapped[int] = mapped_column(Integer, default=0)
+    has_audio: Mapped[bool] = mapped_column(Boolean, default=False)
+    error_message: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class RecordingChunkRecord(TenantRecord, Base):
+    __tablename__ = "recording_chunks"
+
+    recording_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    chunk_index: Mapped[int] = mapped_column(Integer, primary_key=True)
+    content_type: Mapped[str] = mapped_column(String(30), index=True)
+    media_type: Mapped[str] = mapped_column(String(100))
+    timestamp_start_ms: Mapped[int] = mapped_column(Integer)
+    timestamp_end_ms: Mapped[int] = mapped_column(Integer)
+    checksum_sha256: Mapped[str] = mapped_column(String(64))
+    idempotency_key: Mapped[str] = mapped_column(String(200))
+    payload_size: Mapped[int] = mapped_column(Integer)
+    storage_key: Mapped[str] = mapped_column(String(500))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+
+
 settings = get_settings()
 connect_args = {"check_same_thread": False} if settings.database_url.startswith("sqlite") else {}
 engine = create_engine(settings.database_url, connect_args=connect_args, pool_pre_ping=True)

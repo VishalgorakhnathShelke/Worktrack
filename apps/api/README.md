@@ -26,6 +26,8 @@ OIDC/JWT verification before any shared or production deployment.
 
 ## Endpoint Groups
 
+- `/recordings`: create recording drafts, upload idempotent chunks, complete
+  ingestion, and poll read-only processing status.
 - `/sessions`: ingest, list, inspect, delete, preview AI payloads, approve AI
   payloads, and generate SOPs.
 - `/sops`: inspect and approve SOP versions.
@@ -36,9 +38,13 @@ OIDC/JWT verification before any shared or production deployment.
 
 ## Intentional Prototype Boundaries
 
+- Recording chunks use tenant-scoped local object storage. Replace the storage
+  adapter with MinIO/S3 and enqueue workers after completion for multi-instance
+  deployment.
+- Status polling reports worker-owned state; GET requests never advance the
+  pipeline. The processing workers themselves are a later milestone.
 - The local deterministic SOP generator is an adapter placeholder for approved
   external-AI calls.
 - Slow work currently runs synchronously; its service boundary is ready to move
   behind Redis/RQ without changing route contracts.
-- Authentication, production migrations, and object storage integration are
-  required before production use.
+- Authentication and production migrations are required before production use.

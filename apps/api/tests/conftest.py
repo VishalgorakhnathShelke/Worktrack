@@ -3,6 +3,7 @@ from pathlib import Path
 
 TEST_DATABASE = Path(__file__).parent / "test.sqlite3"
 os.environ["WORKTRACE_DATABASE_URL"] = f"sqlite:///{TEST_DATABASE.as_posix()}"
+os.environ["WORKTRACE_RECORDING_STORAGE_PATH"] = str(Path(__file__).parent / "data" / "recordings")
 os.environ["WORKTRACE_AI_PROVIDER"] = "local"
 os.environ["WORKTRACE_TENANT_ID"] = "00000000-0000-0000-0000-000000000099"
 os.environ["WORKTRACE_API_TOKEN"] = "test-api-token"

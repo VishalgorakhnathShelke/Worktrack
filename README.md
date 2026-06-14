@@ -22,9 +22,12 @@ This repository implements the ten-week UNSW project as a scalable monorepo:
 
 ## Current Milestone
 
-Milestone 2 adds the tenant-scoped API, privacy enforcement, SOP generation,
-feedback classification, conservative analytics, and hard-delete cascade. See
-[`docs/commits/002-backend-core.md`](docs/commits/002-backend-core.md).
+Milestone 4 adds durable, resumable recording ingestion. The Manifest V3
+extension upload core persists audio, event, and screenshot chunks to IndexedDB
+before upload, retries pending work after interruption, and deletes local data
+only after acknowledgement. The API validates checksums, handles idempotent
+uploads, blocks incomplete recordings, and exposes read-only processing status.
+See [`docs/commits/004-resumable-recording-uploads.md`](docs/commits/004-resumable-recording-uploads.md).
 
 ## API Quick Start
 
@@ -37,6 +40,18 @@ python -m venv .venv
 
 Swagger UI runs at `http://localhost:8000/docs`; the generated API specification
 is checked in at [`apps/api/openapi.json`](apps/api/openapi.json).
+
+## Extension Upload Core
+
+```powershell
+cd apps/extension
+node --test tests/uploader.test.mjs
+node scripts/build.mjs
+```
+
+Load `apps/extension/dist` as an unpacked Chrome extension. This milestone
+implements durable transport; capture controls, DOM event collection,
+event-driven screenshots, and microphone recording are the next recorder layer.
 
 ## Development Workflow
 
