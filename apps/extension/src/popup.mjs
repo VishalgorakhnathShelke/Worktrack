@@ -15,11 +15,12 @@ const elements = Object.fromEntries(
 );
 let state = null;
 let activeTab = null;
+let refreshTimer = null;
 
 await loadSettings();
 activeTab = (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
+startPolling();
 await refresh();
-setInterval(() => void refresh(), 1_000);
 
 elements["capture-consent"].addEventListener("change", validateStart);
 elements["workflow-name"].addEventListener("input", validateStart);
@@ -27,6 +28,9 @@ elements["start-button"].addEventListener("click", start);
 elements["pause-button"].addEventListener("click", togglePause);
 elements["stop-button"].addEventListener("click", stop);
 elements["retry-button"].addEventListener("click", retryCompletion);
+elements["polling-button"].addEventListener("click", togglePolling);
+elements["discard-active-button"].addEventListener("click", discardRecording);
+elements["discard-processing-button"].addEventListener("click", discardRecording);
 
 async function start() {
   await run(async () => {
@@ -38,6 +42,7 @@ async function start() {
       hasAudio: elements["include-audio"].checked,
       tabId: activeTab.id,
     });
+    startPolling();
     render();
   });
 }
@@ -63,6 +68,40 @@ async function retryCompletion() {
   });
 }
 
+async function discardRecording() {
+  if (!confirm("Discard this recording and permanently delete its captured evidence?")) return;
+  await run(async () => {
+    const result = await send({ type: "discard-recording" });
+    stopPolling();
+    state = null;
+    render();
+    if (result.remoteError) {
+      showError(`Recording discarded locally. Server cleanup was not confirmed: ${result.remoteError}`);
+    }
+  });
+}
+
+function startPolling() {
+  if (refreshTimer !== null) return;
+  refreshTimer = setInterval(() => void refresh(), 1_000);
+}
+
+function stopPolling() {
+  if (refreshTimer === null) return;
+  clearInterval(refreshTimer);
+  refreshTimer = null;
+}
+
+function togglePolling() {
+  if (refreshTimer === null) {
+    startPolling();
+    void refresh();
+  } else {
+    stopPolling();
+    render();
+  }
+}
+
 async function refresh() {
   try {
     state = await send({ type: "recorder-state" });
@@ -71,6 +110,7 @@ async function refresh() {
       state = { ...state, remoteStatus: status.recording.status };
     }
     render();
+    if (state?.remoteStatus === "completed") stopPolling();
   } catch (error) {
     showError(error);
   }
@@ -94,7 +134,13 @@ function render() {
 
   const remoteStage = state.remoteStatus || phase;
   elements["processing-stage"].textContent = title(remoteStage);
-  elements["processing-message"].textContent = state.error || "WorkTrace is preparing your evidence.";
+  elements["processing-message"].textContent =
+    state.error ||
+    (refreshTimer === null
+      ? "Status checking paused. Server processing continues."
+      : "WorkTrace is preparing your evidence.");
+  elements["polling-button"].textContent =
+    refreshTimer === null ? "Resume checking status" : "Stop checking status";
   elements["retry-button"].hidden = phase !== "uploading";
   elements["error-message"].textContent = state.audioError || "";
   const stageIndex = Math.max(0, stages.indexOf(remoteStage));
@@ -131,6 +177,7 @@ async function run(operation) {
 }
 
 function send(message) {
+  console.log(message);
   return chrome.runtime.sendMessage(message).then((response) => {
     if (response?.error) throw new Error(response.error);
     return response;

@@ -31,6 +31,30 @@ node scripts/build.mjs
 
 Load `apps/extension/dist` through `chrome://extensions`.
 
+## Development Reload
+
+Run the development watcher from Windows PowerShell:
+
+```powershell
+cd apps/extension
+npm run dev
+```
+
+The watcher rebuilds `dist` whenever `manifest.json` or a file under `src`
+changes. Keep the unpacked extension pointed at `apps/extension/dist`.
+
+Chrome does not provide full hot module reload for unpacked Manifest V3
+extensions:
+
+- popup changes are visible after closing and reopening the popup;
+- background service-worker or manifest changes require clicking **Reload** for
+  WorkTrace in `chrome://extensions`;
+- content-script changes require reloading the extension and then refreshing
+  the workflow tab.
+
+To inspect background errors, open `chrome://extensions`, enable Developer mode,
+and click the WorkTrace service-worker link under **Inspect views**.
+
 ## Use
 
 1. Start the WorkTrace API on `http://localhost:8000`.

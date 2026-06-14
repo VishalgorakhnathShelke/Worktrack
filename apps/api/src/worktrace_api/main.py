@@ -250,6 +250,18 @@ def recording_status(
     return RecordingStatusResponse(recording=recording, stages=stages)
 
 
+@app.delete(
+    "/recordings/{recording_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["recordings"],
+)
+def delete_recording(recording_id: UUID, repo: Repository = Depends(repository)) -> None:
+    if not repo.get_recording(recording_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recording not found")
+    chunk_storage.delete_recording(repo.tenant_id, recording_id)
+    repo.delete_recording(recording_id)
+
+
 @app.post(
     "/sessions",
     response_model=WorkflowSession,

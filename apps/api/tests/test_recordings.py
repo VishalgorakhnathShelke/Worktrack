@@ -123,3 +123,16 @@ def test_rejects_conflicting_duplicate(client):
         checksum=hashlib.sha256(b"first").hexdigest(),
     )
     assert forged_retry.status_code == 409
+
+
+def test_delete_recording_removes_metadata_and_raw_chunks(client):
+    recording = create_recording(client)
+    assert upload_chunk(client, recording["id"], 0, b"raw-evidence").status_code == 200
+
+    deleted = client.delete(f"/recordings/{recording['id']}", headers=auth_headers())
+
+    assert deleted.status_code == 204
+    missing = client.get(f"/recordings/{recording['id']}/status", headers=auth_headers())
+    assert missing.status_code == 404
+    repeated = client.delete(f"/recordings/{recording['id']}", headers=auth_headers())
+    assert repeated.status_code == 404

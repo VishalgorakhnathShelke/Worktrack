@@ -98,6 +98,24 @@ class Repository:
         )
         return self._recording_from_record(record) if record else None
 
+    def delete_recording(self, recording_id: UUID) -> bool:
+        if not self.get_recording(recording_id):
+            return False
+        self.db.execute(
+            delete(RecordingChunkRecord).where(
+                RecordingChunkRecord.tenant_id == str(self.tenant_id),
+                RecordingChunkRecord.recording_id == str(recording_id),
+            )
+        )
+        self.db.execute(
+            delete(RecordingRecord).where(
+                RecordingRecord.tenant_id == str(self.tenant_id),
+                RecordingRecord.id == str(recording_id),
+            )
+        )
+        self.db.commit()
+        return True
+
     def save_chunk(
         self,
         recording_id: UUID,

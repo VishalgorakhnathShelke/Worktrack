@@ -60,6 +60,7 @@
           <button id="pause-button" class="secondary">Pause</button>
           <button id="stop-button" class="danger">Stop & process</button>
         </div>
+        <button id="discard-active-button" class="discard-button">Discard recording</button>
       </section>
 
       <section id="processing-panel" hidden>
@@ -67,7 +68,11 @@
         <h2 id="processing-stage">Uploading recording</h2>
         <div class="progress"><span id="progress-bar"></span></div>
         <p id="processing-message" class="muted">WorkTrace is preparing your evidence.</p>
-        <button id="retry-button" class="secondary" hidden>Retry pending uploads</button>
+        <div class="processing-controls">
+          <button id="polling-button" class="secondary">Stop checking status</button>
+          <button id="retry-button" class="secondary" hidden>Retry pending uploads</button>
+        </div>
+        <button id="discard-processing-button" class="discard-button">Discard recording</button>
       </section>
 
       <details>

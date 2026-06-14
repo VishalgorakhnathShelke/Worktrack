@@ -46,6 +46,13 @@ export class IndexedDbChunkStore {
     );
   }
 
+  async deleteRecording(recordingId) {
+    const chunks = await this.list(recordingId);
+    const database = await this.open();
+    const store = database.transaction(STORE_NAME, "readwrite").objectStore(STORE_NAME);
+    await Promise.all(chunks.map((chunk) => requestResult(store.delete(chunk.key))));
+  }
+
   async quota() {
     return navigator.storage.estimate();
   }
@@ -68,6 +75,10 @@ export class MemoryChunkStore {
 
   async delete(key) {
     this.chunks.delete(key);
+  }
+
+  async deleteRecording(recordingId) {
+    for (const chunk of await this.list(recordingId)) this.chunks.delete(chunk.key);
   }
 
   async quota() {

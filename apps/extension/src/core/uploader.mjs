@@ -6,7 +6,8 @@ export class RecordingUploader {
     this.tenantId = tenantId;
     this.token = token;
     this.store = store;
-    this.fetch = fetchImpl;
+    // Native fetch must be called without rebinding its WorkerGlobalScope receiver.
+    this.fetch = (...args) => fetchImpl(...args);
   }
 
   headers() {
@@ -46,10 +47,15 @@ export class RecordingUploader {
         `${this.apiUrl}/recordings/${chunk.recordingId}/chunks/${chunk.index}`,
         { method: "PUT", headers: this.headers(), body: form },
       );
+      if (response.status === 404) {
+        await this.store.delete(chunk.key);
+        throw new NonRetryableUploadError("Recording no longer exists");
+      }
       const receipt = await checkedJson(response);
       await this.store.delete(chunk.key);
       return receipt;
     } catch (error) {
+      if (error instanceof NonRetryableUploadError) throw error;
       const attempts = chunk.attempts + 1;
       const retryDelay = RETRY_DELAYS_MS[Math.min(attempts - 1, RETRY_DELAYS_MS.length - 1)];
       await this.store.put({ ...chunk, attempts, nextAttemptAt: Date.now() + retryDelay });
@@ -90,12 +96,31 @@ export class RecordingUploader {
     return checkedJson(response);
   }
 
+  async discard(recordingId) {
+    let remoteError = null;
+    try {
+      const response = await this.fetch(`${this.apiUrl}/recordings/${recordingId}`, {
+        method: "DELETE",
+        headers: this.headers(),
+      });
+      if (!response.ok && response.status !== 404) {
+        throw new Error(`Remote discard failed: ${response.status}`);
+      }
+    } catch (error) {
+      remoteError = error.message;
+    }
+    await this.store.deleteRecording(recordingId);
+    return { discarded: true, remoteError };
+  }
+
   async storagePressure() {
     const { usage = 0, quota = 0 } = await this.store.quota();
     const ratio = quota ? usage / quota : 0;
     return { ratio, warn: ratio >= 0.7, pauseScreenshots: ratio >= 0.85 };
   }
 }
+
+class NonRetryableUploadError extends Error {}
 
 async function checkedJson(response) {
   const body = await response.json();

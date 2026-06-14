@@ -16,7 +16,7 @@ header { display: flex; gap: 11px; align-items: center; margin-bottom: 20px; }
 h1, h2, p { margin: 0; }
 h1 { font-size: 17px; letter-spacing: -0.02em; }
 h2 { margin: 5px 0 11px; font-size: 18px; }
-.eyebrow { color: #67718b; font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.eyebrow { color: #67d18b; font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .pill { margin-left: auto; border-radius: 99px; padding: 5px 9px; font-size: 11px; font-weight: 800; }
 .pill.idle { color: #4d5b73; background: #e7ebf2; }
 .pill.recording { color: #a51d2d; background: #ffe4e7; }
@@ -46,6 +46,9 @@ button:disabled { cursor: not-allowed; opacity: .5; transform: none; }
 .primary { width: 100%; color: white; background: linear-gradient(135deg, #4f46e5, #2563eb); }
 .secondary { color: #30415e; background: #e9eef7; }
 .danger { flex: 1; color: white; background: #d7374c; }
+.discard-button {
+  width: 100%; margin-top: 10px; color: #a51d2d; border: 1px solid #f2b7c0; background: #fff1f3;
+}
 .recording-card { display: flex; gap: 12px; align-items: center; padding-bottom: 14px; }
 .pulse { width: 12px; height: 12px; border-radius: 50%; background: #e32e48; box-shadow: 0 0 0 6px #e32e481f; }
 .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-bottom: 14px; }
@@ -55,7 +58,8 @@ button:disabled { cursor: not-allowed; opacity: .5; transform: none; }
 .controls { display: flex; gap: 8px; }
 .progress { height: 7px; overflow: hidden; border-radius: 99px; background: #e8edf5; }
 .progress span { display: block; width: 12%; height: 100%; border-radius: inherit; background: #3e63dd; transition: width .3s; }
-#retry-button { width: 100%; margin-top: 12px; }
+.processing-controls { display: flex; gap: 8px; margin-top: 12px; }
+.processing-controls button { flex: 1; }
 details summary { cursor: pointer; color: #536079; font-size: 12px; font-weight: 800; }
 details[open] summary { margin-bottom: 13px; }
 .error { min-height: 16px; color: #b4233b; font-size: 11px; font-weight: 700; }

@@ -134,6 +134,15 @@ export class RecordingController {
     });
   }
 
+  discard() {
+    return this.run(async () => {
+      const state = await this.requireActive();
+      const result = await this.uploader.discard(state.recordingId);
+      await this.stateStore.delete(ACTIVE_RECORDING_KEY);
+      return { ...result, tabId: state.tabId };
+    });
+  }
+
   append(contentType, payload, mediaType, counters = {}) {
     return this.run(async () => {
       const state = await this.requireRecording();
@@ -206,6 +215,10 @@ export class ChromeStateStore {
   async set(key, value) {
     await this.storage.set({ [key]: value });
   }
+
+  async delete(key) {
+    await this.storage.remove(key);
+  }
 }
 
 export class MemoryStateStore {
@@ -219,5 +232,9 @@ export class MemoryStateStore {
 
   async set(key, value) {
     this.values.set(key, value);
+  }
+
+  async delete(key) {
+    this.values.delete(key);
   }
 }

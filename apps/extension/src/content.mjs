@@ -30,7 +30,9 @@ async function refreshState() {
 
 async function handleMessage(message) {
   if (message.type === "worktrace-state-changed") {
+    const previousRecordingId = state?.recordingId;
     state = message.state;
+    if (!state || state.recordingId !== previousRecordingId) events = [];
     configureTimers();
     return { ok: true };
   }

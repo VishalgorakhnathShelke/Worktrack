@@ -1,7 +1,4 @@
-import { cp, mkdir, rm } from "node:fs/promises";
+import { buildExtension } from "./build-lib.mjs";
 
-await rm("dist", { recursive: true, force: true });
-await mkdir("dist", { recursive: true });
-await cp("manifest.json", "dist/manifest.json");
-await cp("src", "dist", { recursive: true });
+await buildExtension();
 console.log("Built WorkTrace extension into dist/.");

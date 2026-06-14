@@ -100,6 +100,7 @@ async function handleMessage(message, sender) {
     return stateVisibleToSender(state, sender.tab?.id);
   }
   if (message.type === "start-recorder") {
+    console.log("vishal recoring start")
     let state = await recorder.start(message);
     if (message.hasAudio) {
       try {
@@ -181,6 +182,21 @@ async function handleMessage(message, sender) {
   }
   if (message.type === "retry-completion") {
     return recorder.retryCompletion();
+  }
+  if (message.type === "discard-recording") {
+    const current = await recorder.current();
+    if (!current) return { discarded: true, remoteError: null };
+    if (current.audioEnabled && ["recording", "paused"].includes(current.phase)) {
+      try {
+        await sendAudioCommand("stop");
+      } catch {
+        // Closing the offscreen document below guarantees microphone shutdown.
+      }
+    }
+    await forceCloseAudioDocument();
+    const result = await recorder.discard();
+    await notifyTab(null, result.tabId);
+    return result;
   }
   throw new Error(`Unsupported message type: ${message.type}`);
 }
@@ -285,9 +301,10 @@ async function requireRecordingSender(recorder, sender, recordingId) {
   return state;
 }
 
-async function notifyTab(state) {
+async function notifyTab(state, tabId = state?.tabId) {
+  if (tabId == null) return;
   try {
-    await chrome.tabs.sendMessage(state.tabId, { type: "worktrace-state-changed", state });
+    await chrome.tabs.sendMessage(tabId, { type: "worktrace-state-changed", state });
   } catch {
     // Restricted browser pages do not host the content script.
   }

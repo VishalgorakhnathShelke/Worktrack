@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
+    "dev": "node scripts/watch.mjs",
     "test": "node --test tests/*.test.mjs",
     "typecheck": "node --check src/background.mjs && node --check src/content.mjs && node --check src/offscreen.mjs && node --check src/popup.mjs && node --check src/core/recorder.mjs && node --check src/core/tab-policy.mjs && node --check src/core/uploader.mjs"
   }

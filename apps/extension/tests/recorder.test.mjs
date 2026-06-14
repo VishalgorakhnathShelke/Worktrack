@@ -5,6 +5,7 @@ import { MemoryStateStore, RecordingController } from "../src/core/recorder.mjs"
 
 function fixture({ completeFails = false, persistFails = false, queueFails = false } = {}) {
   const chunks = [];
+  const discarded = [];
   let completionAttempts = 0;
   const uploader = {
     createRecording: async () => ({ id: "recording-1" }),
@@ -20,6 +21,10 @@ function fixture({ completeFails = false, persistFails = false, queueFails = fal
       if (completeFails && completionAttempts === 1) throw new Error("chunks pending");
       return { status: `validating-${count}` };
     },
+    discard: async (recordingId) => {
+      discarded.push(recordingId);
+      return { discarded: true, remoteError: null };
+    },
   };
   let now = 1_000;
   const controller = new RecordingController({
@@ -28,7 +33,7 @@ function fixture({ completeFails = false, persistFails = false, queueFails = fal
     clock: () => now,
     chunkFactory: async (chunk) => chunk,
   });
-  return { controller, chunks, tick: (milliseconds) => (now += milliseconds) };
+  return { controller, chunks, discarded, tick: (milliseconds) => (now += milliseconds) };
 }
 
 test("serializes mixed chunks with monotonic indexes", async () => {
@@ -142,4 +147,15 @@ test("records microphone failure without ending browser capture", async () => {
   assert.equal(state.phase, "recording");
   assert.equal(state.audioEnabled, false);
   assert.match(state.audioError, /permission denied/);
+});
+
+test("discard clears active state and removes the remote recording", async () => {
+  const { controller, discarded } = fixture();
+  await controller.start({ workflowName: "Approve invoice", tabId: 7 });
+
+  const result = await controller.discard();
+
+  assert.deepEqual(discarded, ["recording-1"]);
+  assert.equal(result.tabId, 7);
+  assert.equal(await controller.current(), null);
 });

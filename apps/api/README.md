@@ -13,6 +13,17 @@ python -m venv .venv
 .\.venv\Scripts\uvicorn worktrace_api.main:app --app-dir apps/api/src --reload
 ```
 
+From Bash, the API can be started from any directory with:
+
+```bash
+./apps/api/run.sh
+```
+
+The launcher uses the repository virtual environment when available and runs
+the API at `http://127.0.0.1:8000` with reload enabled. Override its development
+defaults with `WORKTRACE_API_HOST`, `WORKTRACE_API_PORT`,
+`WORKTRACE_API_RELOAD=false`, or `WORKTRACE_PYTHON`.
+
 Swagger UI is available at `http://localhost:8000/docs`. The checked-in
 [`openapi.json`](openapi.json) can be regenerated with:
 
