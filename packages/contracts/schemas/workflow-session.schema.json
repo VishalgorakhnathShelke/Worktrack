@@ -4,19 +4,48 @@
   "title": "WorkflowSession",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "tenant_id", "id", "workflow_name", "status", "events"],
+  "required": [
+    "schema_version",
+    "tenant_id",
+    "id",
+    "workflow_name",
+    "status",
+    "typed_text_consent",
+    "external_ai_approved",
+    "events"
+  ],
   "properties": {
     "schema_version": { "const": "1.0" },
     "tenant_id": { "type": "string", "format": "uuid" },
     "id": { "type": "string", "format": "uuid" },
     "workflow_name": { "type": "string", "minLength": 1, "maxLength": 200 },
-    "status": { "enum": ["recording", "submitted", "approved", "deleted"] },
+    "status": { "enum": ["recording", "submitted", "approved"] },
     "typed_text_consent": { "type": "boolean" },
+    "consent_actor": { "type": ["string", "null"], "maxLength": 200 },
+    "consent_statement_version": { "type": ["string", "null"], "maxLength": 50 },
+    "consented_at": { "type": ["string", "null"], "format": "date-time" },
     "external_ai_approved": { "type": "boolean" },
+    "external_ai_approved_at": { "type": ["string", "null"], "format": "date-time" },
+    "external_ai_payload_hash": {
+      "type": ["string", "null"],
+      "pattern": "^[a-f0-9]{64}$"
+    },
     "duration_ms": { "type": "integer", "minimum": 0 },
     "events": {
       "type": "array",
+      "minItems": 1,
+      "maxItems": 20000,
       "items": { "$ref": "session-event.schema.json" }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "typed_text_consent": { "const": true } } },
+      "then": { "required": ["consent_actor", "consent_statement_version", "consented_at"] }
+    },
+    {
+      "if": { "properties": { "external_ai_approved": { "const": true } } },
+      "then": { "required": ["external_ai_approved_at", "external_ai_payload_hash"] }
+    }
+  ]
 }

@@ -10,9 +10,42 @@
     "tenant_id": { "type": "string", "format": "uuid" },
     "workflow_name": { "type": "string", "maxLength": 200 },
     "reference_session_id": { "type": ["string", "null"], "format": "uuid" },
-    "clustering_status": { "enum": ["disabled_insufficient_sessions", "available"] },
-    "path_summaries": { "type": "array", "items": { "type": "object" } },
-    "friction_points": { "type": "array", "items": { "type": "object" } },
+    "clustering_status": {
+      "enum": ["disabled_insufficient_sessions", "not_implemented", "available"]
+    },
+    "path_summaries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "session_count"],
+        "properties": {
+          "path": { "type": "array", "items": { "type": "string" } },
+          "session_count": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    "friction_points": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "step",
+          "mean_duration_ms",
+          "variation_ms",
+          "friction_score",
+          "sample_size"
+        ],
+        "properties": {
+          "step": { "type": "string" },
+          "mean_duration_ms": { "type": "integer", "minimum": 0 },
+          "variation_ms": { "type": "integer", "minimum": 0 },
+          "friction_score": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "sample_size": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
     "executive_summary": { "type": "array", "items": { "type": "string" }, "maxItems": 3 }
   }
 }

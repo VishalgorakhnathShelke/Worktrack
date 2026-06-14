@@ -11,11 +11,16 @@
     "id": { "type": "string", "format": "uuid" },
     "timestamp": { "type": "string", "format": "date-time" },
     "event_type": { "enum": ["click", "input", "navigation", "pause", "resume"] },
-    "page_url": { "type": "string", "format": "uri" },
+    "page_url": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https?://[^?#]+$",
+      "description": "Sanitized URL without credentials, query parameters, or fragments."
+    },
     "safe_selector": { "type": ["string", "null"], "maxLength": 500 },
     "element_text": { "type": ["string", "null"], "maxLength": 500 },
     "consented_text": { "type": ["string", "null"], "maxLength": 2000 },
-    "screenshot_reference": { "type": ["string", "null"], "maxLength": 500 },
+    "screenshot_reference": { "type": ["string", "null"], "format": "uuid" },
     "duration_ms": { "type": ["integer", "null"], "minimum": 0 },
     "redaction_reasons": {
       "type": "array",

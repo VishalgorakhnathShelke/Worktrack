@@ -12,9 +12,11 @@
     "source_session_id": { "type": "string", "format": "uuid" },
     "version": { "type": "integer", "minimum": 1 },
     "status": { "enum": ["draft", "approved", "archived"] },
-    "title": { "type": "string", "maxLength": 200 },
+    "title": { "type": "string", "minLength": 1, "maxLength": 200 },
     "steps": {
       "type": "array",
+      "minItems": 1,
+      "maxItems": 500,
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -22,10 +24,10 @@
         "properties": {
           "id": { "type": "string", "format": "uuid" },
           "position": { "type": "integer", "minimum": 1 },
-          "title": { "type": "string", "maxLength": 200 },
-          "instruction": { "type": "string", "maxLength": 4000 },
+          "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "instruction": { "type": "string", "minLength": 1, "maxLength": 4000 },
           "warning": { "type": ["string", "null"], "maxLength": 1000 },
-          "screenshot_reference": { "type": ["string", "null"], "maxLength": 500 },
+          "screenshot_reference": { "type": ["string", "null"], "format": "uuid" },
           "estimated_time_ms": { "type": ["integer", "null"], "minimum": 0 },
           "decision_branch": { "type": ["string", "null"], "maxLength": 1000 }
         }

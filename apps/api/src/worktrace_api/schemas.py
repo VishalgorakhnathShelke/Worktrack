@@ -1,0 +1,161 @@
+from datetime import UTC, datetime
+from enum import StrEnum
+from typing import Any, Literal
+from uuid import UUID, uuid4
+
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
+
+SCHEMA_VERSION = "1.0"
+
+
+class StrictModel(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+
+class EventType(StrEnum):
+    CLICK = "click"
+    INPUT = "input"
+    NAVIGATION = "navigation"
+    PAUSE = "pause"
+    RESUME = "resume"
+
+
+class SessionEvent(StrictModel):
+    schema_version: Literal["1.0"] = SCHEMA_VERSION
+    tenant_id: UUID
+    id: UUID = Field(default_factory=uuid4)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    event_type: EventType
+    page_url: HttpUrl
+    safe_selector: str | None = Field(default=None, max_length=500)
+    element_text: str | None = Field(default=None, max_length=500)
+    consented_text: str | None = Field(default=None, max_length=2000)
+    screenshot_reference: UUID | None = None
+    duration_ms: int | None = Field(default=None, ge=0)
+    redaction_reasons: list[str] = Field(default_factory=list)
+
+
+class SessionStatus(StrEnum):
+    RECORDING = "recording"
+    SUBMITTED = "submitted"
+    APPROVED = "approved"
+
+
+class WorkflowSessionCreate(StrictModel):
+    schema_version: Literal["1.0"] = SCHEMA_VERSION
+    tenant_id: UUID
+    workflow_name: str = Field(min_length=1, max_length=200)
+    typed_text_consent: bool = False
+    consent_actor: str | None = Field(default=None, max_length=200)
+    consent_statement_version: str | None = Field(default=None, max_length=50)
+    duration_ms: int = Field(default=0, ge=0)
+    events: list[SessionEvent] = Field(min_length=1, max_length=20_000)
+
+    @model_validator(mode="after")
+    def tenant_ids_match(self) -> "WorkflowSessionCreate":
+        if any(event.tenant_id != self.tenant_id for event in self.events):
+            raise ValueError("Every event tenant_id must match the session tenant_id")
+        if self.typed_text_consent and not (self.consent_statement_version and self.consent_actor):
+            raise ValueError("Typed-text consent requires statement version and actor")
+        return self
+
+
+class WorkflowSession(WorkflowSessionCreate):
+    id: UUID = Field(default_factory=uuid4)
+    status: SessionStatus = SessionStatus.SUBMITTED
+    consented_at: datetime | None = None
+    external_ai_approved: bool = False
+    external_ai_approved_at: datetime | None = None
+    external_ai_payload_hash: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class SOPStatus(StrEnum):
+    DRAFT = "draft"
+    APPROVED = "approved"
+    ARCHIVED = "archived"
+
+
+class SOPStep(StrictModel):
+    id: UUID = Field(default_factory=uuid4)
+    position: int = Field(ge=1)
+    title: str = Field(max_length=200)
+    instruction: str = Field(max_length=4000)
+    warning: str | None = Field(default=None, max_length=1000)
+    screenshot_reference: UUID | None = None
+    estimated_time_ms: int | None = Field(default=None, ge=0)
+    decision_branch: str | None = Field(default=None, max_length=1000)
+
+
+class SOP(StrictModel):
+    schema_version: Literal["1.0"] = SCHEMA_VERSION
+    tenant_id: UUID
+    id: UUID = Field(default_factory=uuid4)
+    source_session_id: UUID
+    version: int = Field(default=1, ge=1)
+    status: SOPStatus = SOPStatus.DRAFT
+    title: str = Field(max_length=200)
+    steps: list[SOPStep] = Field(min_length=1, max_length=500)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class FeedbackClassification(StrEnum):
+    TASK_DESCRIPTION = "task_description"
+    FRUSTRATION_SIGNAL = "frustration_signal"
+    PROCESS_GAP = "process_gap"
+
+
+class FeedbackCreate(StrictModel):
+    session_id: UUID
+    sop_step_id: UUID | None = None
+    transcript: str = Field(min_length=1, max_length=4000)
+    audio_reference: UUID | None = None
+
+
+class Feedback(FeedbackCreate):
+    schema_version: Literal["1.0"] = SCHEMA_VERSION
+    tenant_id: UUID
+    id: UUID = Field(default_factory=uuid4)
+    classification: FeedbackClassification
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class SOPApproval(StrictModel):
+    approved: bool
+
+
+class ReferenceSelection(StrictModel):
+    session_id: UUID | None = None
+
+
+class AnalyticsSummary(StrictModel):
+    schema_version: Literal["1.0"] = SCHEMA_VERSION
+    tenant_id: UUID
+    workflow_name: str
+    reference_session_id: UUID | None = None
+    clustering_status: Literal["disabled_insufficient_sessions", "not_implemented", "available"]
+    path_summaries: list[dict[str, Any]]
+    friction_points: list[dict[str, Any]]
+    executive_summary: list[str] = Field(max_length=3)
+
+
+class ExternalAIPayloadPreview(StrictModel):
+    provider: str
+    approved: bool
+    payload_hash: str = Field(pattern=r"^[a-f0-9]{64}$")
+    payload: dict[str, Any]
+    excluded_fields: list[str]
+
+
+class ExternalAIApprovalRequest(StrictModel):
+    approved: bool
+    actor: str = Field(min_length=1, max_length=200)
+    payload_hash: str = Field(pattern=r"^[a-f0-9]{64}$")
+
+
+class ExportBundle(StrictModel):
+    schema_version: Literal["1.0"] = SCHEMA_VERSION
+    tenant_id: UUID
+    session: WorkflowSession
+    sops: list[SOP]
+    feedback: list[Feedback]

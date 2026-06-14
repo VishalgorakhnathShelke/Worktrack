@@ -22,9 +22,18 @@ This repository implements the ten-week UNSW project as a scalable monorepo:
 
 ## Current Milestone
 
-Milestone 1 establishes the repository, shared contracts, architecture decisions,
-quality gates, and six-person ownership model. See
-[`docs/commits/001-foundation.md`](docs/commits/001-foundation.md).
+Milestone 2 adds the tenant-scoped API, privacy enforcement, SOP generation,
+feedback classification, conservative analytics, and hard-delete cascade. See
+[`docs/commits/002-backend-core.md`](docs/commits/002-backend-core.md).
+
+## API Quick Start
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\pip install -e "apps/api[dev]"
+.\.venv\Scripts\pytest apps/api
+.\.venv\Scripts\uvicorn worktrace_api.main:app --app-dir apps/api/src --reload
+```
 
 ## Development Workflow
 

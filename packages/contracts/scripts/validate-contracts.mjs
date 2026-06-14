@@ -1,4 +1,4 @@
-import { readFile, readdir } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 
 const directory = new URL("../schemas/", import.meta.url);
 const files = (await readdir(directory)).filter((name) => name.endsWith(".json"));
@@ -10,6 +10,13 @@ for (const file of files) {
   }
   if (!schema.properties?.schema_version || !schema.properties?.tenant_id) {
     throw new Error(`${file} must expose schema_version and tenant_id`);
+  }
+  if (schema.additionalProperties !== false) {
+    throw new Error(`${file} must reject unknown top-level properties`);
+  }
+  const references = JSON.stringify(schema).match(/[a-z-]+\.schema\.json/g) ?? [];
+  for (const reference of references) {
+    await access(new URL(reference, directory));
   }
 }
 
