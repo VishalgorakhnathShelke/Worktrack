@@ -100,17 +100,19 @@ def build_external_ai_preview(session: WorkflowSession, provider: str) -> Extern
     approved_events = []
     for event in session.events:
         sensitive = is_sensitive_event(event)
+        consented_text, _ = redact_text(event.consented_text)
+        element_text, _ = redact_text(event.element_text)
         approved_events.append(
             {
                 "event_type": event.event_type,
-                "page_path": urlsplit(str(event.page_url)).path,
-                "element_text": None if sensitive else redact_text(event.element_text)[0],
-                "consented_text": None if sensitive else event.consented_text,
+                "element_text": None if sensitive else element_text,
+                "consented_text": None if sensitive else consented_text,
                 "duration_ms": event.duration_ms,
             }
         )
+    workflow_name, _ = redact_text(session.workflow_name)
     payload = {
-        "workflow_name": session.workflow_name,
+        "workflow_name": workflow_name,
         "events": approved_events,
     }
     payload_hash = hashlib.sha256(

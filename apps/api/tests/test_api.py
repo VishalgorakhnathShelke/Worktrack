@@ -72,7 +72,11 @@ def test_end_to_end_api_flow(client):
     feedback = client.post(
         "/feedback",
         headers=headers,
-        json={"session_id": session["id"], "transcript": "This step is confusing and slow."},
+        json={
+            "session_id": session["id"],
+            "transcript": "This step is confusing and slow.",
+            "audio_reference": str(uuid4()),
+        },
     )
     assert feedback.status_code == 201
     assert feedback.json()["classification"] == "frustration_signal"

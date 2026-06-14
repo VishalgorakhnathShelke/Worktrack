@@ -13,9 +13,26 @@ python -m venv .venv
 .\.venv\Scripts\uvicorn worktrace_api.main:app --app-dir apps/api/src --reload
 ```
 
+Swagger UI is available at `http://localhost:8000/docs`. The checked-in
+[`openapi.json`](openapi.json) can be regenerated with:
+
+```powershell
+.\.venv\Scripts\python apps/api/scripts/export_openapi.py
+```
+
 Every request except `/health` requires the configured `X-Tenant-ID` and a
 Bearer token. The token is a prototype single-tenant control; replace it with
 OIDC/JWT verification before any shared or production deployment.
+
+## Endpoint Groups
+
+- `/sessions`: ingest, list, inspect, delete, preview AI payloads, approve AI
+  payloads, and generate SOPs.
+- `/sops`: inspect and approve SOP versions.
+- `/walkthroughs`: retrieve approved SOPs for onboarding.
+- `/feedback`: classify and store workflow feedback.
+- `/analytics`: compare observed paths and friction evidence.
+- `/exports`: export one sanitized session with its SOPs and feedback.
 
 ## Intentional Prototype Boundaries
 

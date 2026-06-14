@@ -63,6 +63,33 @@ def test_external_ai_preview_excludes_sensitive_element_labels():
     assert preview.payload["events"][0]["element_text"] is None
 
 
+def test_external_ai_preview_redacts_text_and_excludes_url_paths():
+    tenant_id = uuid4()
+    session = WorkflowSession(
+        tenant_id=tenant_id,
+        workflow_name="Process person@example.com",
+        typed_text_consent=True,
+        consent_actor="Test Operator",
+        consent_statement_version="2026-06",
+        consented_at="2026-06-12T00:00:00Z",
+        events=[
+            event(
+                tenant_id=tenant_id,
+                page_url="https://example.test/private/person@example.com",
+                safe_selector="#field-42",
+                element_text="Generic field",
+                consented_text="person@example.com",
+            )
+        ],
+    )
+
+    preview = build_external_ai_preview(session, "local")
+
+    assert preview.payload["workflow_name"] == "Process [REDACTED_EMAIL]"
+    assert preview.payload["events"][0]["consented_text"] == "[REDACTED_EMAIL]"
+    assert "page_path" not in preview.payload["events"][0]
+
+
 def test_strips_url_credentials_and_rejects_unapproved_domain():
     result = sanitize_event(
         event(page_url="https://user:pass@example.test/form?q=secret"),

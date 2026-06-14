@@ -158,7 +158,7 @@ class Repository:
             sop_step_id=str(feedback.sop_step_id) if feedback.sop_step_id else None,
             transcript=feedback.transcript,
             classification=feedback.classification,
-            audio_reference=feedback.audio_reference,
+            audio_reference=str(feedback.audio_reference) if feedback.audio_reference else None,
             created_at=feedback.created_at,
         )
         self.db.add(record)

@@ -35,6 +35,9 @@ python -m venv .venv
 .\.venv\Scripts\uvicorn worktrace_api.main:app --app-dir apps/api/src --reload
 ```
 
+Swagger UI runs at `http://localhost:8000/docs`; the generated API specification
+is checked in at [`apps/api/openapi.json`](apps/api/openapi.json).
+
 ## Development Workflow
 
 All work lands through small, reviewable commits. Every milestone must:
