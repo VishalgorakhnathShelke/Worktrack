@@ -23,8 +23,12 @@ export class RecordingUploader {
   }
 
   async queue(chunk) {
-    await this.store.put(chunk);
+    await this.persist(chunk);
     return this.upload(chunk);
+  }
+
+  async persist(chunk) {
+    await this.store.put(chunk);
   }
 
   async upload(chunk) {

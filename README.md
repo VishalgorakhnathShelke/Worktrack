@@ -22,12 +22,11 @@ This repository implements the ten-week UNSW project as a scalable monorepo:
 
 ## Current Milestone
 
-Milestone 4 adds durable, resumable recording ingestion. The Manifest V3
-extension upload core persists audio, event, and screenshot chunks to IndexedDB
-before upload, retries pending work after interruption, and deletes local data
-only after acknowledgement. The API validates checksums, handles idempotent
-uploads, blocks incomplete recordings, and exposes read-only processing status.
-See [`docs/commits/004-resumable-recording-uploads.md`](docs/commits/004-resumable-recording-uploads.md).
+Milestone 5 adds the browser recorder engine. An explicitly started tab now
+captures privacy-filtered workflow events in ten-second batches and low-FPS
+screenshots, while one serialized coordinator assigns monotonic chunk indexes
+and preserves progress across failed uploads. See
+[`docs/commits/005-browser-recorder-engine.md`](docs/commits/005-browser-recorder-engine.md).
 
 ## API Quick Start
 
@@ -49,9 +48,9 @@ node --test tests/uploader.test.mjs
 node scripts/build.mjs
 ```
 
-Load `apps/extension/dist` as an unpacked Chrome extension. This milestone
-implements durable transport; capture controls, DOM event collection,
-event-driven screenshots, and microphone recording are the next recorder layer.
+Load `apps/extension/dist` as an unpacked Chrome extension. The recorder engine
+is now present; popup controls and microphone recording land in the next
+milestone.
 
 ## Development Workflow
 

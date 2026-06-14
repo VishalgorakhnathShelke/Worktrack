@@ -2,13 +2,20 @@
   "manifest_version": 3,
   "name": "WorkTrace Recorder",
   "version": "0.1.0",
-  "description": "Durably uploads WorkTrace recording chunks.",
-  "permissions": ["activeTab", "alarms", "storage", "unlimitedStorage"],
-  "host_permissions": ["http://localhost:8000/*"],
+  "description": "Records consented browser workflows for WorkTrace SOP generation.",
+  "permissions": ["activeTab", "alarms", "storage", "tabs", "unlimitedStorage"],
+  "host_permissions": ["http://localhost:8000/*", "http://*/*", "https://*/*"],
   "background": {
     "service_worker": "background.mjs",
     "type": "module"
   },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.mjs"],
+      "run_at": "document_start"
+    }
+  ],
   "action": {
     "default_title": "WorkTrace Recorder"
   }
