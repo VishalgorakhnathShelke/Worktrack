@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://worktrace.local/contracts/session-event.schema.json",
+  "title": "SessionEvent",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "tenant_id", "id", "timestamp", "event_type", "page_url"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "id": { "type": "string", "format": "uuid" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "event_type": { "enum": ["click", "input", "navigation", "pause", "resume"] },
+    "page_url": { "type": "string", "format": "uri" },
+    "safe_selector": { "type": ["string", "null"], "maxLength": 500 },
+    "element_text": { "type": ["string", "null"], "maxLength": 500 },
+    "consented_text": { "type": ["string", "null"], "maxLength": 2000 },
+    "screenshot_reference": { "type": ["string", "null"], "maxLength": 500 },
+    "duration_ms": { "type": ["integer", "null"], "minimum": 0 },
+    "redaction_reasons": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+    }
+  }
+}

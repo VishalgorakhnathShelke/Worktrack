@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://worktrace.local/contracts/workflow-session.schema.json",
+  "title": "WorkflowSession",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "tenant_id", "id", "workflow_name", "status", "events"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "id": { "type": "string", "format": "uuid" },
+    "workflow_name": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "status": { "enum": ["recording", "submitted", "approved", "deleted"] },
+    "typed_text_consent": { "type": "boolean" },
+    "external_ai_approved": { "type": "boolean" },
+    "duration_ms": { "type": "integer", "minimum": 0 },
+    "events": {
+      "type": "array",
+      "items": { "$ref": "session-event.schema.json" }
+    }
+  }
+}

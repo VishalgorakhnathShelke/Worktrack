@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://worktrace.local/contracts/sop.schema.json",
+  "title": "SOP",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "tenant_id", "id", "source_session_id", "version", "status", "steps"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "id": { "type": "string", "format": "uuid" },
+    "source_session_id": { "type": "string", "format": "uuid" },
+    "version": { "type": "integer", "minimum": 1 },
+    "status": { "enum": ["draft", "approved", "archived"] },
+    "title": { "type": "string", "maxLength": 200 },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "position", "title", "instruction"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "position": { "type": "integer", "minimum": 1 },
+          "title": { "type": "string", "maxLength": 200 },
+          "instruction": { "type": "string", "maxLength": 4000 },
+          "warning": { "type": ["string", "null"], "maxLength": 1000 },
+          "screenshot_reference": { "type": ["string", "null"], "maxLength": 500 },
+          "estimated_time_ms": { "type": ["integer", "null"], "minimum": 0 },
+          "decision_branch": { "type": ["string", "null"], "maxLength": 1000 }
+        }
+      }
+    }
+  }
+}

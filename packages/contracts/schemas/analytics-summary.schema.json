@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://worktrace.local/contracts/analytics-summary.schema.json",
+  "title": "AnalyticsSummary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "tenant_id", "workflow_name", "clustering_status", "path_summaries", "friction_points"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "workflow_name": { "type": "string", "maxLength": 200 },
+    "reference_session_id": { "type": ["string", "null"], "format": "uuid" },
+    "clustering_status": { "enum": ["disabled_insufficient_sessions", "available"] },
+    "path_summaries": { "type": "array", "items": { "type": "object" } },
+    "friction_points": { "type": "array", "items": { "type": "object" } },
+    "executive_summary": { "type": "array", "items": { "type": "string" }, "maxItems": 3 }
+  }
+}

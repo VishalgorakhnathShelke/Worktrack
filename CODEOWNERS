@@ -1,0 +1,8 @@
+# Every area has a primary and secondary owner. Replace placeholders with names.
+*                         @person-1 @person-6
+/apps/api/                @person-4 @person-5
+/apps/web/                @person-3 @person-1
+/apps/extension/          @person-2 @person-3
+/packages/contracts/      @person-4 @person-2
+/docs/security/           @person-2 @person-4
+/docs/customer-tests/     @person-1 @person-3

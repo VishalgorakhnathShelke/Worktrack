@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://worktrace.local/contracts/feedback.schema.json",
+  "title": "Feedback",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "tenant_id", "id", "session_id", "transcript", "classification"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "id": { "type": "string", "format": "uuid" },
+    "session_id": { "type": "string", "format": "uuid" },
+    "sop_step_id": { "type": ["string", "null"], "format": "uuid" },
+    "transcript": { "type": "string", "maxLength": 4000 },
+    "classification": { "enum": ["task_description", "frustration_signal", "process_gap"] },
+    "audio_reference": { "type": ["string", "null"], "maxLength": 500 }
+  }
+}
